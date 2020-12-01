@@ -1,0 +1,255 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import sys
+from PyQt5 import QtCore,QtCore,QtGui,QtWidgets
+from PyQt5.QtCore import QT_VERSION_STR
+
+class Scene (QtWidgets.QGraphicsScene) :
+    def __init__(self,parent=None) :
+        QtWidgets.QGraphicsScene.__init__(self)
+        self.parent=parent
+        self.tool='line'
+        self.begin,self.end,self.offset=QtCore.QPoint(0,0),QtCore.QPoint(0,0),QtCore.QPoint(0,0)
+        self.item=None
+        self.pen=QtGui.QPen()
+        self.pen.setColor(QtCore.Qt.red)
+        self.pen.setWidth(3)
+        self.font=QtGui.QFont("serif", 11)
+        self.brush=QtGui.QBrush(QtCore.Qt.green)
+        self.polygon=[]
+        rect=QtWidgets.QGraphicsRectItem(0,0,100,100)
+        rect.setPen(self.pen)
+        rect.setBrush(self.brush)
+        self.addItem(rect)
+        
+    def set_tool(self,tool) :
+        print("set_tool(self,tool)",tool)
+        self.tool=tool
+
+    def set_pen(self,pen) :
+        print("set_pen(self,pen)",pen)
+        if pen=='SolidLine':
+            self.pen.setStyle(QtCore.Qt.SolidLine)
+        elif pen=='DotLine':
+            self.pen.setStyle(QtCore.Qt.DotLine)
+        elif pen=='DashLine':
+            self.pen.setStyle(QtCore.Qt.DashLine)
+        elif pen=='DashDotLine':
+            self.pen.setStyle(QtCore.Qt.DashDotLine)
+        elif pen=='DashDotDotLine':
+            self.pen.setStyle(QtCore.Qt.DashDotDotLine)
+            
+    def set_width(self,width):
+        print("set width(self,width",width)
+        self.pen.setWidth(int(width))
+
+    def set_brush(self,brush):
+        print("set_brush(self,brush)",brush)
+        if brush=='No':
+            self.brush.setStyle(QtCore.Qt.NoBrush)
+        elif brush=='Solid':
+            self.brush.setStyle(QtCore.Qt.SolidPattern)
+        elif brush=='Dense3':
+            self.brush.setStyle(QtCore.Qt.Dense3Pattern)
+        elif brush=='Dense5':
+            self.brush.setStyle(QtCore.Qt.Dense5Pattern)
+        elif brush=='Dense7':
+            self.brush.setStyle(QtCore.Qt.Dense7Pattern)
+        elif brush=='Cross':
+            self.brush.setStyle(QtCore.Qt.CrossPattern)
+        elif brush=='Diag':
+            self.brush.setStyle(QtCore.Qt.BDiagPattern)
+        elif brush=='Diag Cross':
+            self.brush.setStyle(QtCore.Qt.DiagCrossPattern)
+        #ne fonctionne pas 
+        # elif brush=='Gradient':
+        #     gradient=QtCore.QGradient.RadialGradient.gradient(50, 50, 50, 50, 50)
+        #     gradient.setColorAt(0, QtCore.Qt.QColor.fromRgbF(0, 1, 0, 1))
+        #     gradient.setColorAt(1, QtCore.Qt.QColor.fromRgbF(0, 0, 0, 0))
+        #     self.brush.setStyle(gradient)
+
+    def set_pen_color(self,color) :
+        self.pen.setColor(color)
+
+    def set_brush_color(self,color) :
+       print("set_brush_color(self,color)",color)
+       self.brush.setColor(color)
+
+    def set_font(self,font):
+        print("set font", font)
+        self.font=font
+ 
+    def mousePressEvent(self, event):
+        # print("Scene.mousePressEvent()")
+        if event.button() == QtCore.Qt.LeftButton:
+            # print("Left Button Clicked")
+            self.begin = self.end = event.scenePos()
+            self.item=self.itemAt(self.begin,QtGui.QTransform())
+            if self.item :
+                print(self.item.pos())
+                self.offset =self.begin-self.item.pos()
+                
+    def mouseMoveEvent(self, event):
+        # print("Scene.mouseMoveEvent()")
+        if self.item :
+            self.item.setPos(event.scenePos() - self.offset)
+        self.end = event.scenePos()
+ 
+    def mouseReleaseEvent(self, event):
+        # print("Scene.mouseReleaseEvent()",self.tool)
+        self.end = event.scenePos()
+        if event.button() == QtCore.Qt.LeftButton:
+            # print("Left Button Clicked")
+            if self.item :
+                print(" item ")
+                self.item.setPos(event.scenePos() - self.offset)
+    #            self.item.ungrabMouse()
+                self.item=None
+            elif self.tool=='line' :
+                self.addLine(self.begin.x(), self.begin.y(),self.end.x(), self.end.y(),self.pen)
+            elif self.tool=='rectangle':
+                self.addRect(self.begin.x(),self.begin.y(),self.end.x()-self.begin.x(),self.end.y()-self.begin.y(), self.pen, self.brush)
+            elif self.tool=='ellipse' :
+                self.addEllipse(self.begin.x(),self.begin.y(),self.end.x()-self.begin.x(),self.end.y()-self.begin.y(), self.pen, self.brush)
+            elif self.tool=='polygon':
+                pos=QtCore.QPoint(event.scenePos().x(), event.scenePos().y())
+                print(pos)
+                self.polygon.append(pos)
+            elif self.tool=='text':
+                transform=QtGui.QTransform()
+                transform.translate(self.begin.x(),self.begin.y())
+                text, ok = QtWidgets.QInputDialog().getText(self.parent, "Type your text",
+                    "Text:", QtWidgets.QLineEdit.Normal)
+                if ok and text:
+                    texte=QtWidgets.QGraphicsTextItem(text)
+                    texte.setFont(self.font)
+                    # texte.boundingRect().setX(self.begin.x())
+                    # texte.boundingRect().setY(self.begin.y())
+                    texte.setTransform(transform)
+                    self.addItem(texte)
+
+                else :
+                    print("no item selected and nothing to draw !")
+            self.parent.statusBar().showMessage(self.tool+" created")
+
+        elif event.button() == QtCore.Qt.RightButton:
+            #do what you want here
+            # print("Right Button Clicked")
+            self.begin = self.end = event.scenePos()
+            print(event.pos().x(), event.pos().y())
+            pos=QtCore.QPoint(event.screenPos().x(), event.screenPos().y())
+            right_click_menu= QtWidgets.QMenu()
+            right_click_menu.addMenu(self.parent.menu_tools)
+            right_click_menu.addMenu(self.parent.menu_style)
+            right_click_menu.addSeparator()
+            self.action_delete = QtWidgets.QAction( 'Delete', self)
+            right_click_menu.addAction(self.action_delete)
+            self.action_delete.triggered.connect(self.delete_item)
+            right_click_menu.exec(pos)
+            
+    def delete_item(self):
+        self.item=self.itemAt(self.begin,QtGui.QTransform())
+        if self.item :
+            msgBox=QtWidgets.QMessageBox(self.parent)
+            msgBox.setWindowTitle("Delete")
+            msgBox.setText("Are you sure you want delete this item ?")
+            msgBox.setInformativeText("You will cannot cancel this action")
+            msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.No)
+            msgBox.exec_()
+            if msgBox.clickedButton()==msgBox.button(QtWidgets.QMessageBox.Yes):
+                #Ignore was clicked
+                self.removeItem(self.item)
+                print("Item delete")
+                self.parent.statusBar().showMessage("Item Delete")
+            elif msgBox.clickedButton()==msgBox.button(QtWidgets.QMessageBox.No):
+                #Cancel was clicked
+                msgBox.close()
+            
+        else:
+            print("No item to delete")
+            self.parent.statusBar().showMessage("No item to delete")
+
+    def mouseDoubleClickEvent(self, event):
+        qpoly=QtGui.QPolygonF(self.polygon)
+        qgpoly=QtWidgets.QGraphicsPolygonItem(qpoly)
+        qgpoly.setPen(self.pen)
+        qgpoly.setBrush(self.brush)
+        self.addItem(qgpoly)
+        del self.polygon[:]
+
+    def items_to_data(self):
+        data=[]
+        for item in self.items():
+            tmp={}
+            if isinstance(item, QtWidgets.QGraphicsLineItem) :
+                tmp={ "obj" : "line", "x1": item.line().x1(),"y1": item.line().y1(), "x2": item.line().x2(),"y2": item.line().y2()}
+            elif isinstance(item, QtWidgets.QGraphicsRectItem) :
+                tmp={ "obj" : "rectangle", "x": item.rect().x(),"y": item.rect().y(), "width": item.rect().width(),"height": item.rect().height()}
+            elif isinstance(item, QtWidgets.QGraphicsEllipseItem) :
+                tmp={ "obj" : "ellipse", "x": item.rect().x(),"y": item.rect().y(), "width": item.rect().width(),"height": item.rect().height()}
+            elif isinstance(item, QtWidgets.QGraphicsPolygonItem) :
+                points=[]
+                for point in item.polygon() :
+                    points.append({"x":point.x(),"y":point.y()})
+                    # print("point", point.x(),point.y())
+                tmp={ "obj" : "polygon", "points" : points}
+            elif isinstance(item, QtWidgets.QGraphicsTextItem) :
+                tmp={ "obj" : "text", "x": item.x(),"y": item.y(), 
+                "font": {"family" : item.font().family(), "pointSize" : item.font().pointSize()},"string": item.document().toPlainText()}
+            else:
+                continue
+
+            if hasattr(item, 'pen'):
+                tmp["pen"]={"style": item.pen().style(), "width": item.pen().widthF(), "color": item.pen().color().rgba()}
+            if hasattr(item, 'brush'):
+                tmp["brush"]={"style": item.brush().style(), "color": item.brush().color().rgba()}
+
+            data.append(tmp)
+        return data
+
+    def data_to_items(self,data):
+        assert(type(data) is list)
+        for item_data in data  :
+            item=None
+            t = item_data["obj"]
+            if t == "line":
+                x1, y1, x2, y2 = item_data["x1"], item_data["y1"], item_data["x2"], item_data["y2"]
+                item = QtWidgets.QGraphicsLineItem(x1,y1,x2,y2)
+            elif t == "rectangle":
+                x, y, w, h = item_data["x"], item_data["y"], item_data["width"], item_data["height"]
+                item = QtWidgets.QGraphicsRectItem(x,y,w,h)
+            elif t == "ellipse":
+                x, y, w, h = item_data["x"], item_data["y"], item_data["width"], item_data["height"]
+                item = QtWidgets.QGraphicsEllipseItem(x,y,w,h)
+            elif t == "polygon":
+                for p in item_data["points"]:
+                    pos=QtCore.QPoint(p["x"], p["y"])
+                    # print(pos)
+                    self.polygon.append(pos)
+                qpoly=QtGui.QPolygonF(self.polygon)
+                item=QtWidgets.QGraphicsPolygonItem(qpoly)
+                del self.polygon[:]
+            elif t == "text":
+                transform=QtGui.QTransform()
+                transform.translate(item_data["x"],item_data["y"])
+                item=QtWidgets.QGraphicsTextItem(item_data["string"])
+                item.setFont(QtGui.QFont(item_data["font"]["family"], item_data["font"]["pointSize"]))
+                item.setTransform(transform)
+            else:
+                continue
+            if "pen" in item_data :
+                pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(
+                    item_data["pen"]["color"])), item_data["pen"]["width"], item_data["pen"]["style"])
+                item.setPen(pen)
+            if "brush" in item_data:
+                brush = QtGui.QBrush(QtGui.QColor(item_data["brush"]["color"]),item_data["brush"]["style"])
+                item.setBrush(brush)
+            self.addItem(item)
+    
+
+class Second(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        super(Second, self).__init__(parent)
+        self.resize(200, 100)
+        self.setWindowTitle("Editeur de texte")
